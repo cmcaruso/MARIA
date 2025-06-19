@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from hydra.utils import call
 from CMC_utils.miscellaneous import do_nothing
-from CMC_utils.preprocessing import survival_to_label, discrete_to_label
+from CMC_utils.preprocessing import discrete_to_label
 from CMC_utils.save_load import save_table
 from CMC_utils.datasets import SupervisedTabularDatasetTorch
 

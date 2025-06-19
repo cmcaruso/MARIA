@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 from CMC_utils.data_augmentation import missing_augmentation
-from CMC_utils.preprocessing import set_fold_preprocessing, apply_preprocessing, set_target_preprocessing, apply_target_preprocessing
+from CMC_utils.preprocessing import set_fold_preprocessing, apply_preprocessing
 
 __all__ = ["SupervisedTabularDatasetTorch"]
 
@@ -14,12 +14,8 @@ class SupervisedTabularDatasetTorch(Dataset):
     def __init__(self, data: pd.DataFrame, labels: pd.DataFrame, db_task: str, set_name: str, preprocessing_params: dict, preprocessing_paths: dict, test_fold: int = 0, val_fold: int = 0, augmentation: bool = False, normalize_target: bool = False, decimals: int = 2, **kwargs):
         if set_name == "train":
             set_fold_preprocessing(data, test_fold, val_fold, preprocessing_paths, preprocessing_params, **kwargs)
-            if normalize_target and db_task == "regression":
-                set_target_preprocessing(labels, test_fold, val_fold, preprocessing_paths, **kwargs)
 
         [data] = apply_preprocessing(data, preprocessing_paths=preprocessing_paths, preprocessing_params=preprocessing_params, test_fold=test_fold, val_fold=val_fold, **kwargs)
-        if normalize_target and db_task == "regression":
-            labels = apply_target_preprocessing(labels, test_fold, val_fold, preprocessing_paths, **kwargs)
 
         self.__ID = data.index.to_list()
         self.__data = data.values
