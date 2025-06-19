@@ -1,3 +1,6 @@
+import sys
+sys.path.append("CMC_utils")
+
 import os
 import re
 import scipy
@@ -96,9 +99,12 @@ def compute_single_MARIA_vs_model_strategy_imputer(competitor_path: str, tr_rate
     return model, strategy, imputer, MARIA_better_results_perc, MARIA_worse_results_perc
 
 
-def compute_MARIA_vs_model_strategy_imputer(maria_path: str, *competitors_paths: str, missing_scenario: str, separate_folds: bool = False):
+def compute_MARIA_vs_model_strategy_imputer(maria_path: str, *competitors_paths: str, missing_scenario: str, task_name: str, separate_folds: bool = False):
     if missing_scenario == "all":
-        tr_rates = [0, 30, 50, 75]
+        if task_name in ("ADNI_prognosis_m36", "AI4Covid_death", "AI4Covid_prognosis"):
+            tr_rates = [0, 30, 50, 75]
+        else:
+            tr_rates = [0, 50, 75]
     else:
         tr_rates = [0, 10, 30, 50, 75]
     te_rates = tr_rates
@@ -148,8 +154,9 @@ def compute_MARIA_vs_model_strategy_imputer_combinations(*tasks_paths: str, outp
         competitors_paths = [path for path in joint_paths if re.search("naimcat", path) is None]
         competitors_paths = early_paths + competitors_paths + late_paths
 
-        task_results = compute_MARIA_vs_model_strategy_imputer(maria_path, *competitors_paths, missing_scenario=missing_scenario, separate_folds=separate_folds)
         task_name = task_path.split("/")[-1]
+
+        task_results = compute_MARIA_vs_model_strategy_imputer(maria_path, *competitors_paths, missing_scenario=missing_scenario, task_name=task_name, separate_folds=separate_folds)
         datasets_tables[task_name] = task_results
 
     return datasets_tables
@@ -181,6 +188,10 @@ if __name__ == "__main__":
 
     imputers = ["knn"]
 
+    ml_models = ["AdaBoost", "DecisionTree", "HistGradientBoost", "RandomForest", "SVM", "XGBoost"]
+    ml_models_wo_imputers = ["DecisionTree", "HistGradientBoost", "RandomForest", "XGBoost"]
+    dl_models = ["MLP", "TabNet", "TabTransformer", "FTTransformer"]
+
     for missing_scenario in ["all", "modalities"]:
         print(f"Computing MARIA vs model strategy imputer combinations for missing scenario: {missing_scenario}")
 
@@ -198,8 +209,12 @@ if __name__ == "__main__":
             single_res_splitted.columns = pd.MultiIndex.from_product([[col], ["\% Win", "\% Loss"]])
             res_splitted = pd.concat([res_splitted, single_res_splitted], axis=1)
 
-        for strategy in ["early", "joint", "late"]:
-            res_splitted.loc[(strategy, "Mean", "Mean"), :] = res_splitted.loc[strategy].mean(axis=0)
+        # for strategy in ["early", "joint", "late"]:
+        #     res_splitted.loc[(strategy, "Mean", "Mean"), :] = res_splitted.loc[strategy].mean(axis=0)
+
+        for strategy, models_dict, imputer in zip(["early", "early", "early", "joint", "late", "late", "late"], [{"ML": ml_models}, {"ML": ml_models_wo_imputers}, {"DL": dl_models}, {"DL": dl_models}, {"ML": ml_models}, {"ML": ml_models_wo_imputers}, {"DL": dl_models}], ["with", "without", "with", "with", "with", "without", "with"]):
+            models_type, models = list(models_dict.items())[0]
+            res_splitted.loc[(strategy, models_type, imputer), :] = res_splitted.loc[(strategy, models, imputer)].mean(axis=0)
 
         for scenario in ["\% Win", "\% Loss"]:
             mask = res_splitted.columns.get_level_values(1) == scenario
